@@ -7,6 +7,7 @@ and updates outputs"""
 from __future__ import annotations
 
 import typing as t
+from datetime import datetime
 
 from jupyter_client.manager import KernelManager
 from nbclient.client import NotebookClient
@@ -14,7 +15,7 @@ from nbclient.client import execute as _execute
 
 # Backwards compatibility for imported name
 from nbclient.exceptions import CellExecutionError  # noqa: F401
-from nbformat import NotebookNode
+from nbformat import NotebookNode, _struct
 
 from .base import Preprocessor
 
@@ -121,5 +122,12 @@ class ExecutePreprocessor(Preprocessor, NotebookClient):
             Index of the cell being processed
         """
         self._check_assign_resources(resources)
+        start_exec = datetime.now()
         cell = self.execute_cell(cell, index, store_history=True)
+        end_exec = datetime.now()
+        if cell.cell_type == "code":
+            data = _struct.Struct()
+            data['text/plain'] = '<IPython.core.display.HTML object>'
+            data['text/html'] = f"<h5 style=\"background-color:green;color:white;\">Code block executed in {str((end_exec - start_exec))}</h5>"
+            cell.outputs.insert(0, _struct.Struct(output_type='display_data', metadata=_struct.Struct(), data=data))
         return cell, self.resources
